@@ -53,6 +53,9 @@ class ScreenCaptureService : Service() {
     fun startCapture(resultCode: Int, data: Intent) {
         val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         val projection = mgr.getMediaProjection(resultCode, data) ?: return
+        // Promote to a foreground service BEFORE creating the virtual display.
+        // Android 10+ requires MediaProjection to run from a foreground service.
+        startForeground(NOTIFICATION_ID, buildNotification())
         val metrics = resources.displayMetrics
         captureManager.start(projection, metrics.widthPixels, metrics.heightPixels, metrics.densityDpi)
     }
