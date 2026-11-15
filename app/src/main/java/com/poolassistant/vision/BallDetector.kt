@@ -85,9 +85,12 @@ class BallDetector {
         var blobs = VisionCommon.extractBlobs(mask, w, h, minPixels = minBallPixels)
 
         // Filter to near-circular blobs of plausible ball size.
-        val ballRadiusRange = (minOf(w, h) * 0.01)..(minOf(w, h) * 0.16)
+        val minSide = minOf(w, h).toDouble()
+        val ballRadiusMin = minSide * 0.01
+        val ballRadiusMax = minSide * 0.16
         blobs = blobs.filter { blob ->
-            blob.radius in ballRadiusRange &&
+            val r = blob.radius.toDouble()
+            r in ballRadiusMin..ballRadiusMax &&
             blob.bounds.width() in 1..w &&
             blob.bounds.height() in 1..h
         }
@@ -96,7 +99,7 @@ class BallDetector {
         val accepted = ArrayList<VisionCommon.Blob>()
         for (blob in blobs) {
             val overlaps = accepted.any { a ->
-                hypot((a.cx - blob.cx).toDouble(), (a.cy - blob.cy).toDouble()) < a.radius + blob.radius
+                hypot((a.cx - blob.cx).toDouble(), (a.cy - blob.cy).toDouble()) < (a.radius + blob.radius).toDouble()
             }
             if (!overlaps) accepted.add(blob)
         }
@@ -168,11 +171,11 @@ class BallDetector {
         val brightness = (r + g + b) / 3.0
 
         // White cue ball.
-        if (brightness > 200 && abs(r - g) < 25 && abs(g - b) < 25) {
+        if (brightness > 200.0 && abs(r - g) < 25.0 && abs(g - b) < 25.0) {
             return Triple(0, Ball.BallType.CUE, 0.9)
         }
         // Black 8-ball.
-        if (brightness < 60) {
+        if (brightness < 60.0) {
             return Triple(8, Ball.BallType.EIGHT, 0.85)
         }
 
@@ -185,9 +188,9 @@ class BallDetector {
             if (d < bestDist) { bestDist = d; bestNumber = num }
         }
 
-        val bestConf = if (bestDist < 90) 0.75 else 0.5
+        val bestConf = if (bestDist < 90.0) 0.75 else 0.5
         // Striped vs solid: low color dominance across the blob suggests stripes.
-        val isSolid = bestDist < 90
+        val isSolid = bestDist < 90.0
         val type = when {
             bestNumber == -1 -> Ball.BallType.UNKNOWN
             isSolid -> Ball.BallType.SOLID

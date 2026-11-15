@@ -23,10 +23,7 @@ internal object VisionCommon {
         val pixelCount: Int
     )
 
-    data class Color {
-        val r: Int
-        val g: Int
-        val b: Int
+    data class Color(val r: Int, val g: Int, val b: Int) {
         val rgb: Int
             get() = (r shl 16) or (g shl 8) or b
     }

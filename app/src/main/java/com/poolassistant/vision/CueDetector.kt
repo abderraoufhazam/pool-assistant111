@@ -39,7 +39,7 @@ class CueDetector {
         }
 
         val totalPixels = w * h
-        if (tanCount < totalPixels * 0.002 || tanCount > totalPixels * 0.25) return null
+        if (tanCount < (totalPixels * 0.002).toInt() || tanCount > (totalPixels * 0.25).toInt()) return null
 
         val blobs = VisionCommon.extractBlobs(mask, w, h, minPixels = (totalPixels * 0.0005).toInt())
         // A cue shaft is long and thin: aspect ratio well above 1.5, length dominant.
@@ -48,7 +48,7 @@ class CueDetector {
             val bh = blob.bounds.height()
             val longer = maxOf(bw, bh)
             val shorter = minOf(bw, bh)
-            longer > minOf(w, h) * 0.15 && shorter > 0 && (longer.toDouble() / shorter) >= 1.5
+            longer > (minOf(w, h) * 0.15).toInt() && shorter > 0 && (longer.toDouble() / shorter) >= 1.5
         } ?: return null
 
         // Principal direction from bounding-box elongation.
@@ -69,7 +69,7 @@ class CueDetector {
         val normalized = worldDir.normalized()
         if (normalized.isZero()) return null
 
-        val confidence = (0.5 + 0.3 * (if (tanCount > totalPixels * 0.01) 1.0 else 0.5)).coerceIn(0.0, 1.0)
+        val confidence = (0.5 + 0.3 * (if (tanCount > (totalPixels * 0.01).toInt()) 1.0 else 0.5)).coerceIn(0.0, 1.0)
 
         return CueDetection(normalized, confidence)
     }

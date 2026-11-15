@@ -48,7 +48,7 @@ class PowerDetector {
         }
 
         val totalPixels = w * h
-        if (count < totalPixels * 0.0008) return null
+        if (count < (totalPixels * 0.0008).toInt()) return null
 
         val blobs = VisionCommon.extractBlobs(mask, w, h, minPixels = (totalPixels * 0.0004).toInt())
         val gauge = blobs.firstOrNull { blob ->
@@ -56,7 +56,7 @@ class PowerDetector {
             val bh = blob.bounds.height()
             val longer = maxOf(bw, bh)
             val shorter = minOf(bw, bh)
-            longer > minOf(w, h) * 0.08 && shorter > 0 && (longer.toDouble() / shorter) >= 2.0
+            longer > (minOf(w, h) * 0.08).toInt() && shorter > 0 && (longer.toDouble() / shorter) >= 2.0
         } ?: return null
 
         // Estimate fill fraction from the blob's extent relative to a presumed
