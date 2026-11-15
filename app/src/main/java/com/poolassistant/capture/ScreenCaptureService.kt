@@ -35,17 +35,21 @@ class ScreenCaptureService : Service() {
     override fun onCreate() {
         super.onCreate()
         captureManager = ScreenCaptureManager(this)
+        activeManager = captureManager
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification())
-        return START_NOT_STICKY
+        // NOTE: startForeground() is NOT called here — it is called inside
+        // startCapture() after the MediaProjection is obtained, which is the
+        // required order for the mediaProjection foreground service type.
+        return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
         captureManager.release()
+        activeManager = null
         super.onDestroy()
     }
 
@@ -108,5 +112,13 @@ class ScreenCaptureService : Service() {
     companion object {
         const val CHANNEL_ID = "pool_assistant_capture"
         const val NOTIFICATION_ID = 1001
+
+        /**
+         * Static handle to the live capture manager so the overlay service can
+         * reach it even if the Activity-based binding never completed.
+         */
+        @Volatile
+        var activeManager: ScreenCaptureManager? = null
+            private set
     }
 }

@@ -110,9 +110,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindServices() {
-        Intent(this, ScreenCaptureService::class.java).also { intent ->
-            bindService(intent, captureConnection, Context.BIND_AUTO_CREATE)
-        }
+        val intent = Intent(this, ScreenCaptureService::class.java)
+        // Start (not just bind) so the capture service survives when this
+        // activity is backgrounded or destroyed while the game is open.
+        startService(intent)
+        bindService(intent, captureConnection, Context.BIND_AUTO_CREATE)
     }
 
     private fun startOverlayService() {

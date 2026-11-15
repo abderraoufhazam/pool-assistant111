@@ -100,12 +100,15 @@ class FloatingOverlayService : Service() {
     }
 
     private fun startVisualization() {
-        val cm = captureManager
+        // Prefer the attached manager; fall back to the static handle so the
+        // overlay keeps working even if the Activity-based binding was lost.
+        val cm = captureManager ?: com.poolassistant.capture.ScreenCaptureService.activeManager
         if (cm == null || !cm.isCapturing) {
             // Signal the problem visually so the user can report it.
             floatingButton?.showError()
             return
         }
+        captureManager = cm
         visualizationActive = true
         floatingButton?.isActive = true
 
