@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity() {
                     svc.startCapture(result.resultCode, result.data!!)
                     vm.setStatus(MainViewModel.Status.CAPTURING, getString(R.string.status_capturing))
                     startOverlayService()
+                    launchGame()
                 } else {
                     vm.setStatus(MainViewModel.Status.ERROR, getString(R.string.error_capture_service))
                 }
@@ -157,6 +158,16 @@ class MainActivity : AppCompatActivity() {
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:$packageName")
             )
+            startActivity(intent)
+        }
+    }
+
+    /** Opens 8 Ball Pool automatically after capture starts. */
+    private fun launchGame() {
+        val pkg = "com.miniclip.eightballpool"
+        val intent = packageManager.getLaunchIntentForPackage(pkg)
+        if (intent != null) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
         }
     }
