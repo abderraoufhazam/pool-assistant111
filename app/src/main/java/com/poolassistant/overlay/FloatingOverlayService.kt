@@ -123,20 +123,12 @@ class FloatingOverlayService : Service() {
 
                     try {
                         val downscaled = ImageUtils.downscale(frame, MAX_FRAME_W, MAX_FRAME_H)
+                        val scaleX = frame.width.toDouble() / downscaled.width.toDouble()
+                        val scaleY = frame.height.toDouble() / downscaled.height.toDouble()
                         val result = pipeline.process(downscaled)
-                        if (result.isReliable && result.cueBall != null && result.cueDirection != null) {
-                            val prediction = predictor.predict(
-                                balls = result.balls,
-                                table = result.table!!,
-                                cueDirection = result.cueDirection,
-                                powerPercent = result.powerPercent ?: 50.0,
-                                confidence = result.overallConfidence
-                            )
-                            val mapper = buildMapper(result)
-                            postPrediction(prediction, mapper)
-                        } else {
-                            postPrediction(null, null)
-                        }
+                        val prediction = buildPrediction(result)
+                        val mapper = buildMapper(result, scaleX, scaleY)
+                        postPrediction(prediction, mapper)
                     } catch (t: Throwable) {
                         // Never crash the app on a bad frame; just clear and continue.
                         postPrediction(null, null)
@@ -150,6 +142,35 @@ class FloatingOverlayService : Service() {
         }
     }
 
+    /**
+     * Builds a prediction from the detection result. Falls back to aiming the
+     * cue ball at the nearest object ball when the cue stick is not visible,
+     * and to 50% power when the gauge is not readable, so the overlay shows
+     * useful guidance even with partial detection.
+     */
+    private fun buildPrediction(result: DetectionResult): TrajectoryPredictor.Prediction? {
+        val table = result.table ?: return null
+        val cueBall = result.cueBall ?: return null
+
+        var direction = result.cueDirection
+        if (direction == null || direction.isZero()) {
+            val nearest = result.balls
+                .filter { it.id != cueBall.id }
+                .minByOrNull { it.position.distanceTo(cueBall.position) }
+            direction = nearest?.let { (it.position - cueBall.position).normalized() }
+        }
+        if (direction == null || direction.isZero()) return null
+
+        val power = result.powerPercent ?: 50.0
+        return predictor.predict(
+            balls = result.balls,
+            table = table,
+            cueDirection = direction,
+            powerPercent = power,
+            confidence = result.overallConfidence
+        )
+    }
+
     private fun stopVisualization() {
         visualizationActive = false
         floatingButton?.isActive = false
@@ -158,12 +179,18 @@ class FloatingOverlayService : Service() {
         postPrediction(null, null)
     }
 
-    private fun buildMapper(result: DetectionResult): CoordinateMapper? {
+    private fun buildMapper(
+        result: DetectionResult,
+        scaleX: Double,
+        scaleY: Double
+    ): CoordinateMapper? {
         val table = result.table ?: return null
         val rect = result.screenRect ?: return null
+        // Detection ran on the downscaled frame; scale the detected rectangle
+        // back to full-screen coordinates for the overlay view.
         val screenRect = CoordinateMapper.ScreenRect(
-            com.poolassistant.models.Vector2D(rect.left, rect.top),
-            com.poolassistant.models.Vector2D(rect.right, rect.bottom)
+            com.poolassistant.models.Vector2D(rect.left * scaleX, rect.top * scaleY),
+            com.poolassistant.models.Vector2D(rect.right * scaleX, rect.bottom * scaleY)
         )
         return CoordinateMapper.from(screenRect, table)
     }

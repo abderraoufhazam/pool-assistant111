@@ -43,13 +43,13 @@ internal object VisionCommon {
             abs(b - ref.b) <= tolerance
     }
 
-    /** Dominant-cloth test: a green felt pixel. */
+    /** Dominant-cloth test: a green felt pixel. Lenient on purpose. */
     fun isFeltGreen(pixel: Int): Boolean {
         val r = (pixel shr 16) and 0xFF
         val g = (pixel shr 8) and 0xFF
         val b = pixel and 0xFF
         // Green dominates and is not too dark/bright.
-        return g > 60 && g > r + 20 && g > b + 15 && r < 120 && b < 120
+        return g > 50 && g > r + 10 && g > b + 5 && r < 150 && b < 150
     }
 
     /**
