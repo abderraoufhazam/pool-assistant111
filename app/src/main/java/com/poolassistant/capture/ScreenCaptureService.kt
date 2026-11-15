@@ -56,28 +56,25 @@ class ScreenCaptureService : Service() {
     /** Start/continue capture with the projection obtained from consent result. */
     fun startCapture(resultCode: Int, data: Intent) {
         try {
-            val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-            val projection = mgr.getMediaProjection(resultCode, data) ?: return
+            // Android 14+ REQUIRES this exact order:
+            //   1. startForeground() with the mediaProjection type,
+            //   2. then getMediaProjection(),
+            //   3. then createVirtualDisplay().
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    buildNotification(),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification())
+            }
 
-            // Promote to a foreground service BEFORE creating the virtual display.
-            // Android 10+ requires MediaProjection to run from a foreground service
-            // of type mediaProjection; use the explicit-type overload on Q+.
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(
-                        NOTIFICATION_ID,
-                        buildNotification(),
-                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-                    )
-                } else {
-                    startForeground(NOTIFICATION_ID, buildNotification())
-                }
-            } catch (t: Throwable) {
-                try {
-                    startForeground(NOTIFICATION_ID, buildNotification())
-                } catch (t2: Throwable) {
-                    // Continue anyway; some devices are lenient about this.
-                }
+            val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val projection = mgr.getMediaProjection(resultCode, data)
+            if (projection == null) {
+                stopSelf()
+                return
             }
 
             val metrics = resources.displayMetrics
