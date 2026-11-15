@@ -109,9 +109,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindServices() {
-        Intent(this, ScreenCaptureService::class.java).also { intent ->
-            bindService(intent, captureConnection, Context.BIND_AUTO_CREATE)
+        val intent = Intent(this, ScreenCaptureService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
         }
+        bindService(intent, captureConnection, Context.BIND_AUTO_CREATE)
     }
 
     private fun startOverlayService() {

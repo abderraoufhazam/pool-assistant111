@@ -107,27 +107,38 @@ class FloatingOverlayService : Service() {
 
         frameJob = scope.launch(Dispatchers.Default) {
             var lastProcessedAt = 0L
-            cm.frames.collect { frame ->
-                if (!visualizationActive) return@collect
-                val now = System.currentTimeMillis()
-                if (now - lastProcessedAt < processingIntervalMs) return@collect
-                lastProcessedAt = now
+            try {
+                cm.frames.collect { frame ->
+                    if (!visualizationActive) return@collect
+                    val now = System.currentTimeMillis()
+                    if (now - lastProcessedAt < processingIntervalMs) return@collect
+                    lastProcessedAt = now
 
-                val downscaled = ImageUtils.downscale(frame, MAX_FRAME_W, MAX_FRAME_H)
-                val result = pipeline.process(downscaled)
-                if (result.isReliable && result.cueBall != null && result.cueDirection != null) {
-                    val prediction = predictor.predict(
-                        balls = result.balls,
-                        table = result.table!!,
-                        cueDirection = result.cueDirection,
-                        powerPercent = result.powerPercent ?: 50.0,
-                        confidence = result.overallConfidence
-                    )
-                    val mapper = buildMapper(result)
-                    postPrediction(prediction, mapper)
-                } else {
-                    postPrediction(null, null)
+                    try {
+                        val downscaled = ImageUtils.downscale(frame, MAX_FRAME_W, MAX_FRAME_H)
+                        val result = pipeline.process(downscaled)
+                        if (result.isReliable && result.cueBall != null && result.cueDirection != null) {
+                            val prediction = predictor.predict(
+                                balls = result.balls,
+                                table = result.table!!,
+                                cueDirection = result.cueDirection,
+                                powerPercent = result.powerPercent ?: 50.0,
+                                confidence = result.overallConfidence
+                            )
+                            val mapper = buildMapper(result)
+                            postPrediction(prediction, mapper)
+                        } else {
+                            postPrediction(null, null)
+                        }
+                    } catch (t: Throwable) {
+                        // Never crash the app on a bad frame; just clear and continue.
+                        postPrediction(null, null)
+                    }
                 }
+            } catch (t: Throwable) {
+                // Frame channel closed or capture stopped; leave visualization off.
+                visualizationActive = false
+                floatingButton?.isActive = false
             }
         }
     }
