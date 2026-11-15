@@ -51,13 +51,37 @@ class ScreenCaptureService : Service() {
 
     /** Start/continue capture with the projection obtained from consent result. */
     fun startCapture(resultCode: Int, data: Intent) {
-        val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val projection = mgr.getMediaProjection(resultCode, data) ?: return
-        // Promote to a foreground service BEFORE creating the virtual display.
-        // Android 10+ requires MediaProjection to run from a foreground service.
-        startForeground(NOTIFICATION_ID, buildNotification())
-        val metrics = resources.displayMetrics
-        captureManager.start(projection, metrics.widthPixels, metrics.heightPixels, metrics.densityDpi)
+        try {
+            val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val projection = mgr.getMediaProjection(resultCode, data) ?: return
+
+            // Promote to a foreground service BEFORE creating the virtual display.
+            // Android 10+ requires MediaProjection to run from a foreground service
+            // of type mediaProjection; use the explicit-type overload on Q+.
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        buildNotification(),
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                    )
+                } else {
+                    startForeground(NOTIFICATION_ID, buildNotification())
+                }
+            } catch (t: Throwable) {
+                try {
+                    startForeground(NOTIFICATION_ID, buildNotification())
+                } catch (t2: Throwable) {
+                    // Continue anyway; some devices are lenient about this.
+                }
+            }
+
+            val metrics = resources.displayMetrics
+            captureManager.start(projection, metrics.widthPixels, metrics.heightPixels, metrics.densityDpi)
+        } catch (t: Throwable) {
+            // Never crash the app when capture fails; just stop the service.
+            stopSelf()
+        }
     }
 
     private fun buildNotification(): Notification {
