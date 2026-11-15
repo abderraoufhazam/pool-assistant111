@@ -68,6 +68,20 @@ class ScreenCaptureManager(private val context: Context) {
 
         val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
 
+        // Android 14+ REQUIRES registering a MediaProjection.Callback with
+        // onCapturedContentResize() overridden BEFORE createVirtualDisplay();
+        // otherwise createVirtualDisplay() throws IllegalStateException.
+        projection.registerCallback(object : MediaProjection.Callback() {
+            override fun onCapturedContentResize(width: Int, height: Int) {
+                // Resize handling can be added here later.
+            }
+
+            override fun onStop() {
+                // Projection was stopped by the system or the user.
+                stop()
+            }
+        }, handler)
+
         virtualDisplay = projection.createVirtualDisplay(
             "PoolAssistantCapture",
             width, height, density,
