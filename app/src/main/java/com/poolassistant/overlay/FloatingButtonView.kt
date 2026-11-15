@@ -43,6 +43,20 @@ class FloatingButtonView(context: Context) : View(context) {
         style = Paint.Style.STROKE
         strokeWidth = dp(3f)
     }
+    private val errorRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.argb(240, 255, 59, 48) // red = capture not ready
+        style = Paint.Style.STROKE
+        strokeWidth = dp(3f)
+    }
+
+    private var errorFlashUntil = 0L
+
+    /** Flashes a red ring briefly to signal "capture not ready". */
+    fun showError() {
+        errorFlashUntil = System.currentTimeMillis() + 1500L
+        invalidate()
+        postDelayed({ invalidate() }, 1600L)
+    }
 
     private var downX = 0f
     private var downY = 0f
@@ -56,8 +70,11 @@ class FloatingButtonView(context: Context) : View(context) {
         val cy = height / 2f
         val r = minOf(cx, cy) - dp(3f)
         canvas.drawCircle(cx, cy, r, fillPaint)
-        if (isActive) canvas.drawCircle(cx, cy, r, activeRingPaint)
-        else canvas.drawCircle(cx, cy, r, ringPaint)
+        when {
+            isActive -> canvas.drawCircle(cx, cy, r, activeRingPaint)
+            System.currentTimeMillis() < errorFlashUntil -> canvas.drawCircle(cx, cy, r, errorRingPaint)
+            else -> canvas.drawCircle(cx, cy, r, ringPaint)
+        }
         canvas.drawText("8", cx, cy + glyphPaint.textSize / 3f, glyphPaint)
     }
 

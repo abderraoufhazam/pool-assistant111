@@ -100,8 +100,12 @@ class FloatingOverlayService : Service() {
     }
 
     private fun startVisualization() {
-        val cm = captureManager ?: return
-        if (!cm.isCapturing) return
+        val cm = captureManager
+        if (cm == null || !cm.isCapturing) {
+            // Signal the problem visually so the user can report it.
+            floatingButton?.showError()
+            return
+        }
         visualizationActive = true
         floatingButton?.isActive = true
 
