@@ -9,7 +9,10 @@ import android.os.IBinder
 import android.view.Gravity
 import android.view.WindowManager
 import com.poolassistant.capture.ScreenCaptureManager
+import com.poolassistant.models.Ball
 import com.poolassistant.models.DetectionResult
+import com.poolassistant.models.TableState
+import com.poolassistant.models.Vector2D
 import com.poolassistant.physics.PhysicsParameters
 import com.poolassistant.physics.TrajectoryPredictor
 import com.poolassistant.utils.CoordinateMapper
@@ -112,6 +115,10 @@ class FloatingOverlayService : Service() {
         visualizationActive = true
         floatingButton?.isActive = true
 
+        // Draw a demo trajectory immediately so the user can verify that the
+        // overlay rendering works, before real detection kicks in.
+        postDemoPrediction()
+
         frameJob = scope.launch(Dispatchers.Default) {
             var lastProcessedAt = 0L
             try {
@@ -140,6 +147,34 @@ class FloatingOverlayService : Service() {
                 floatingButton?.isActive = false
             }
         }
+    }
+
+    /**
+     * Draws a sample trajectory mapped onto the full screen so the user can
+     * verify that the overlay rendering works, before real detection replaces
+     * it. This is replaced by real predictions as soon as detection succeeds.
+     */
+    private fun postDemoPrediction() {
+        val table = TableState(
+            left = 0.0, top = 0.0, right = 2.0, bottom = 1.0,
+            cushionInset = 0.05, pockets = emptyList(), confidence = 1.0
+        )
+        val cue = Ball(id = 0, number = 0, position = Vector2D(0.5, 0.5))
+        val target = Ball(id = 1, number = 1, position = Vector2D(1.5, 0.5))
+        val prediction = predictor.predict(
+            balls = listOf(cue, target),
+            table = table,
+            cueDirection = Vector2D(1.0, 0.0),
+            powerPercent = 70.0,
+            confidence = 1.0
+        )
+        val w = resources.displayMetrics.widthPixels.toDouble()
+        val h = resources.displayMetrics.heightPixels.toDouble()
+        val mapper = CoordinateMapper.from(
+            CoordinateMapper.ScreenRect(Vector2D(0.0, 0.0), Vector2D(w, h)),
+            table
+        )
+        postPrediction(prediction, mapper)
     }
 
     /**
