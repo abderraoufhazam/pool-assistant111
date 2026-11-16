@@ -43,10 +43,10 @@ class TableDetector {
         val feltRatio = feltCount.toDouble() / (w * h)
 
         // The felt should occupy a meaningful but not total fraction of frame.
-        if (feltRatio < 0.08 || feltRatio > 0.98) return null
+        if (feltRatio < 0.05 || feltRatio > 0.99) return null
 
         // Largest felt blob = playing surface.
-        val blob = VisionCommon.extractBlobs(mask, w, h, minPixels = (w * h * 0.03).toInt())
+        val blob = VisionCommon.extractBlobs(mask, w, h, minPixels = (w * h * 0.02).toInt())
             .firstOrNull()
             ?: return null
 
@@ -55,11 +55,11 @@ class TableDetector {
         val aspect = bw.toDouble() / bh.toDouble()
 
         // A billiards surface aspect is roughly 2:1 (landscape) with tolerance.
-        if (aspect < 1.3 || aspect > 2.9) return null
+        if (aspect < 1.2 || aspect > 4.0) return null
 
         // Rectangularity: how well the blob fills its bounding box.
         val rectangularity = blob.pixelCount.toDouble() / (bw * bh)
-        if (rectangularity < 0.55) return null
+        if (rectangularity < 0.4) return null
 
         val confidence = (
             (feltRatio * 0.4) +
@@ -67,7 +67,7 @@ class TableDetector {
             (0.2 * when { aspect in 1.9..2.1 -> 1.0; aspect in 1.7..2.3 -> 0.7; else -> 0.4 })
         ).coerceIn(0.0, 1.0)
 
-        if (confidence < 0.35) return null
+        if (confidence < 0.3) return null
 
         // Normalize to world units: long side = 2.0, short side = 1.0.
         val longAxis = if (aspect >= 1.0) 2.0 else 1.0

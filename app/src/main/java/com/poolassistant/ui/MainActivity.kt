@@ -179,6 +179,16 @@ class MainActivity : AppCompatActivity() {
             Settings.canDrawOverlays(this)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Show the latest detection diagnostics written by the overlay service.
+        val debug = getSharedPreferences("pool_assistant_prefs", MODE_PRIVATE)
+            .getString("debug_status", "")
+        if (!debug.isNullOrEmpty()) {
+            findViewById<android.widget.TextView>(R.id.tv_status_detail).text = debug
+        }
+    }
+
     override fun onDestroy() {
         runCatching { if (captureBound) unbindService(captureConnection) }
         runCatching { if (overlayBound) unbindService(overlayConnection) }

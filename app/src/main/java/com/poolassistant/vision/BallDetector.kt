@@ -81,13 +81,13 @@ class BallDetector {
             }
         }
 
-        val minBallPixels = (w * h * 0.0008).toInt().coerceAtLeast(3)
+        val minBallPixels = (w * h * 0.00005).toInt().coerceAtLeast(3)
         var blobs = VisionCommon.extractBlobs(mask, w, h, minPixels = minBallPixels)
 
         // Filter to near-circular blobs of plausible ball size.
         val minSide = minOf(w, h).toDouble()
-        val ballRadiusMin = minSide * 0.01
-        val ballRadiusMax = minSide * 0.16
+        val ballRadiusMin = minSide * 0.005
+        val ballRadiusMax = minSide * 0.25
         blobs = blobs.filter { blob ->
             val r = blob.radius.toDouble()
             r in ballRadiusMin..ballRadiusMax &&

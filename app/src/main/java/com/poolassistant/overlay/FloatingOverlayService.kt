@@ -133,6 +133,17 @@ class FloatingOverlayService : Service() {
                         val scaleX = frame.width.toDouble() / downscaled.width.toDouble()
                         val scaleY = frame.height.toDouble() / downscaled.height.toDouble()
                         val result = pipeline.process(downscaled)
+
+                        // Write debug status so the user can read it in the app.
+                        val debug = "Table:${result.table != null} Balls:${result.balls.size} " +
+                            "Cue:${result.cueBall != null} Dir:${result.cueDirection != null} " +
+                            "Power:${result.powerPercent?.toInt() ?: -1}"
+                        try {
+                            getSharedPreferences("pool_assistant_prefs", Context.MODE_PRIVATE)
+                                .edit().putString("debug_status", debug).apply()
+                        } catch (_: Throwable) {
+                        }
+
                         val prediction = buildPrediction(result)
                         val mapper = buildMapper(result, scaleX, scaleY)
                         if (prediction != null && mapper != null) {
