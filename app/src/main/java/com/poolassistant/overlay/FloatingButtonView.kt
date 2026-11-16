@@ -18,6 +18,10 @@ class FloatingButtonView(context: Context) : View(context) {
 
     var onTap: (() -> Unit)? = null
 
+    /** Window plumbing for drag-to-move: the WINDOW moves, not the view. */
+    var windowManager: android.view.WindowManager? = null
+    var windowParams: android.view.WindowManager.LayoutParams? = null
+
     var isActive: Boolean = false
         set(value) {
             field = value
@@ -56,6 +60,14 @@ class FloatingButtonView(context: Context) : View(context) {
         errorFlashUntil = System.currentTimeMillis() + 1500L
         invalidate()
         postDelayed({ invalidate() }, 1600L)
+        try {
+            android.widget.Toast.makeText(
+                context,
+                "الالتقاط غير نشط - افتح التطبيق واضغط Start Screen Analysis",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        } catch (_: Throwable) {
+        }
     }
 
     private var downX = 0f
@@ -83,8 +95,8 @@ class FloatingButtonView(context: Context) : View(context) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.rawX
                 downY = event.rawY
-                touchStartX = x
-                touchStartY = y
+                touchStartX = windowParams?.x?.toFloat() ?: 0f
+                touchStartY = windowParams?.y?.toFloat() ?: 0f
                 dragged = false
                 return true
             }
@@ -92,8 +104,13 @@ class FloatingButtonView(context: Context) : View(context) {
                 val dx = event.rawX - downX
                 val dy = event.rawY - downY
                 if (kotlin.math.abs(dx) > dp(4f) || kotlin.math.abs(dy) > dp(4f)) dragged = true
-                x = touchStartX + dx
-                y = touchStartY + dy
+                val lp = windowParams
+                val wm = windowManager
+                if (lp != null && wm != null) {
+                    lp.x = (touchStartX + dx).toInt()
+                    lp.y = (touchStartY + dy).toInt()
+                    wm.updateViewLayout(this, lp)
+                }
                 return true
             }
             MotionEvent.ACTION_UP -> {

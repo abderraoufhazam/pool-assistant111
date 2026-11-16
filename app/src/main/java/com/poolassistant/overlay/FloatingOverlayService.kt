@@ -135,10 +135,13 @@ class FloatingOverlayService : Service() {
                         val result = pipeline.process(downscaled)
                         val prediction = buildPrediction(result)
                         val mapper = buildMapper(result, scaleX, scaleY)
-                        postPrediction(prediction, mapper)
+                        if (prediction != null && mapper != null) {
+                            postPrediction(prediction, mapper)
+                        }
+                        // If detection failed, keep the demo prediction visible
+                        // instead of clearing the overlay.
                     } catch (t: Throwable) {
-                        // Never crash the app on a bad frame; just clear and continue.
-                        postPrediction(null, null)
+                        // Never crash the app on a bad frame; keep whatever is shown.
                     }
                 }
             } catch (t: Throwable) {
@@ -279,6 +282,8 @@ class FloatingOverlayService : Service() {
         btnParams.x = 32
         btnParams.y = 300
         button.onTap = { toggleVisualization() }
+        button.windowManager = windowManager
+        button.windowParams = btnParams
         windowManager.addView(button, btnParams)
         floatingButton = button
         buttonParams = btnParams
