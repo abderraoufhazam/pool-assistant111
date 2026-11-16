@@ -134,8 +134,37 @@ class FloatingOverlayService : Service() {
                         val scaleY = frame.height.toDouble() / downscaled.height.toDouble()
                         val result = pipeline.process(downscaled)
 
-                        // Write debug status so the user can read it in the app.
-                        val debug = "Table:${result.table != null} Balls:${result.balls.size} " +
+                        // Analyse frame colours for diagnostics.
+                        val wpx = downscaled.width
+                        val hpx = downscaled.height
+                        val pxArr = IntArray(wpx * hpx)
+                        downscaled.getPixels(pxArr, 0, wpx, 0, 0, wpx, hpx)
+                        var rSum = 0L; var gSum = 0L; var bSum = 0L
+                        var greenCount = 0
+                        val colorCounts = HashMap<Int, Int>()
+                        for (p in pxArr) {
+                            val r = (p shr 16) and 0xFF
+                            val g = (p shr 8) and 0xFF
+                            val b = p and 0xFF
+                            rSum += r; gSum += g; bSum += b
+                            if (g > 50 && g > r + 10 && g > b + 5 && r < 150 && b < 150) greenCount++
+                            val key = ((r shr 4) shl 8) or ((g shr 4) shl 4) or (b shr 4)
+                            colorCounts[key] = (colorCounts[key] ?: 0) + 1
+                        }
+                        val npx = pxArr.size
+                        val avgR = (rSum / npx).toInt()
+                        val avgG = (gSum / npx).toInt()
+                        val avgB = (bSum / npx).toInt()
+                        val feltPct = greenCount * 100 / npx
+                        val top = colorCounts.entries.sortedByDescending { it.value }.take(3)
+                            .joinToString(" ") { e ->
+                                val cr = ((e.key shr 8) and 0xF) * 16
+                                val cg = ((e.key shr 4) and 0xF) * 16
+                                val cb = (e.key and 0xF) * 16
+                                "($cr,$cg,$cb):${e.value * 100 / npx}%"
+                            }
+
+                        val debug = "Table:${result.table != null} felt:$feltPct% avg:($avgR,$avgG,$avgB) top:$top Balls:${result.balls.size} " +
                             "Cue:${result.cueBall != null} Dir:${result.cueDirection != null} " +
                             "Power:${result.powerPercent?.toInt() ?: -1}"
                         try {
